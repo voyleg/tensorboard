@@ -51,9 +51,11 @@ import {
   getProposedViewExtentOnZoom,
 } from './line_chart_interactive_utils';
 
-export interface TooltipDatum {
+export interface TooltipDatum<
+  Metadata extends DataSeriesMetadata = DataSeriesMetadata
+> {
   id: string;
-  metadata: DataSeriesMetadata;
+  metadata: Metadata;
   closestPointIndex: number | null;
   point: {x: number; y: number} | null;
 }
@@ -74,7 +76,7 @@ export function scrollStrategyFactory(
 }
 
 export interface TooltipTemplateContext {
-  data: TooltipDatum;
+  data: TooltipDatum[];
 }
 
 export type TooltipTemplate = TemplateRef<TooltipTemplateContext>;

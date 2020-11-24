@@ -89,6 +89,7 @@ limitations under the License.
     [seriesData]="dataSeries"
     [seriesMetadataMap]="chartMetadataMap"
     [yScaleType]="newYAxisType"
+    [tooltipTemplate]="tooltip"
   ></line-chart>
 
   <ng-template #legacyChart>
@@ -106,5 +107,36 @@ limitations under the License.
       [resizeEventDebouncePeriodInMs]="RESIZE_REDRAW_DEBOUNCE_TIME_IN_MS"
       (onResize)="redraw()"
     ></tb-line-chart>
+  </ng-template>
+
+  <ng-template #tooltip let-tooltipData="data">
+    <table class="tooltip">
+      <thead>
+        <tr>
+          <th class="circle-header"></th>
+          <th>Run</th>
+          <th *ngIf="smoothingEnabled">Smoothed</th>
+          <th>Value</th>
+          <th>Step</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let datum of tooltipData;">
+          <tr class="tooltip-row">
+            <td class="tooltip-row-circle">
+              <span [style.backgroundColor]="datum.metadata.color"></span>
+            </td>
+            <td class="name">{{ datum.metadata.displayName }}</td>
+            <td>{{ datum.point.y }}</td>
+            <td *ngIf="smoothingEnabled">
+              {{ getTooltipUnsmoothedValue(datum) }}
+            </td>
+            <td>{{ datum.point.x | number }}</td>
+            <td>{{ datum.point.wallTime * 1000 | date: 'short' }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
   </ng-template>
 </div>

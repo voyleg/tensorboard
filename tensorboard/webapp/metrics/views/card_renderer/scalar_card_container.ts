@@ -140,10 +140,14 @@ function areSeriesEqual(
       [showFullSize]="showFullSize"
       [isPinned]="isPinned$ | async"
       [dataSeries]="(gpuLineChartEnabled$ | async) ? (dataSeries$ | async) : []"
+      [dataSeriesMap]="
+        (gpuLineChartEnabled$ | async) ? (dataSeriesMap$ | async) : null
+      "
       [chartMetadataMap]="
         (gpuLineChartEnabled$ | async) ? (chartMetadataMap$ | async) : {}
       "
       [gpuLineChartEnabled]="gpuLineChartEnabled$ | async"
+      [smoothingEnabled]="smoothingEnabled$ | async"
       (onFullSizeToggle)="onFullSizeToggle()"
       (onPinClicked)="pinStateChanged.emit($event)"
     ></scalar-card-component>
@@ -174,6 +178,7 @@ export class ScalarCardContainer implements CardRenderer, OnInit {
   seriesDataList$?: Observable<SeriesDataList> = of([]);
   isPinned$?: Observable<boolean>;
   dataSeries$?: Observable<ScalarCardDataSeries[]>;
+  dataSeriesMap$?: Observable<Map<string, ScalarCardDataSeries>>;
   chartMetadataMap$?: Observable<ScalarCardSeriesMetadataMap>;
 
   readonly tooltipSort$ = this.store.select(getMetricsTooltipSort);
@@ -304,7 +309,14 @@ export class ScalarCardContainer implements CardRenderer, OnInit {
           })
         );
       }),
-      startWith([])
+      startWith([]),
+      shareReplay(1)
+    );
+
+    this.dataSeriesMap$ = this.dataSeries$.pipe(
+      map((dataSeries) => {
+        return new Map(dataSeries.map((datum) => [datum.id, datum]));
+      })
     );
 
     this.chartMetadataMap$ = runIdAndPoints$.pipe(

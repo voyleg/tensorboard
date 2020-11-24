@@ -37,12 +37,18 @@ import {
   XAxisType as ChartXAxisType,
   YAxisType,
 } from '../../../widgets/line_chart/line_chart_types';
-import {RendererType, ScaleType} from '../../../widgets/line_chart_v2/types';
+import {
+  RendererType,
+  ScaleType,
+  TooltipDatum,
+} from '../../../widgets/line_chart_v2/types';
 import {ScalarStepDatum} from '../../data_source';
 import {TooltipSort, XAxisType} from '../../types';
 import {
   ScalarCardDataSeries,
+  ScalarCardSeriesMetadata,
   ScalarCardSeriesMetadataMap,
+  SeriesType,
 } from './scalar_card_types';
 
 const RESIZE_REDRAW_DEBOUNCE_TIME_IN_MS = 50;
@@ -125,8 +131,11 @@ export class ScalarCardComponent {
   @Input() seriesDataList!: SeriesDataList;
 
   // gpu chart related props.
+  @Input() smoothingEnabled!: boolean;
   @Input() gpuLineChartEnabled!: boolean;
   @Input() dataSeries!: ScalarCardDataSeries[];
+  // For tooltip search.
+  @Input() dataSeriesMap!: Map<string, ScalarCardDataSeries>;
   @Input() chartMetadataMap!: ScalarCardSeriesMetadataMap;
 
   @Output() onFullSizeToggle = new EventEmitter<void>();
@@ -178,5 +187,22 @@ export class ScalarCardComponent {
         this.lineChart.redraw();
       }
     }
+  }
+
+  getTooltipUnsmoothedValue(
+    tooltipDatum: TooltipDatum<ScalarCardSeriesMetadata>
+  ): number {
+    const {metadata, closestPointIndex} = tooltipDatum;
+
+    if (metadata.type !== SeriesType.DERIVED) {
+      return NaN;
+    }
+
+    const matchingSeries = this.dataSeriesMap.get(metadata.smoothOf);
+    if (closestPointIndex === null || matchingSeries === undefined) {
+      return NaN;
+    }
+
+    return matchingSeries.points[closestPointIndex].y;
   }
 }
