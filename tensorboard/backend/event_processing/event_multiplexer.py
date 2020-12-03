@@ -71,7 +71,7 @@ class EventMultiplexer(object):
     """
 
     def __init__(
-        self, run_path_map=None, size_guidance=None, purge_orphaned_data=True
+        self, run_path_map=None, size_guidance=None, purge_orphaned_data=True, event_file_name_filter=None,
     ):
         """Constructor for the `EventMultiplexer`.
 
@@ -84,6 +84,7 @@ class EventMultiplexer(object):
             `event_accumulator.EventAccumulator` for details.
           purge_orphaned_data: Whether to discard any events that were "orphaned" by
             a TensorFlow restart.
+          event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
         """
         logger.info("Event Multiplexer initializing.")
         self._accumulators_mutex = threading.Lock()
@@ -100,10 +101,10 @@ class EventMultiplexer(object):
                 run_path_map,
             )
             for (run, path) in six.iteritems(run_path_map):
-                self.AddRun(path, run)
+                self.AddRun(path, run, event_file_name_filter)
         logger.info("Event Multiplexer done initializing")
 
-    def AddRun(self, path, name=None):
+    def AddRun(self, path, name=None, event_file_name_filter=None):
         """Add a run to the multiplexer.
 
         If the name is not specified, it is the same as the path.
@@ -118,6 +119,7 @@ class EventMultiplexer(object):
         Args:
           path: Path to the event files (or event directory) for given run.
           name: Name of the run to add. If not provided, is set to path.
+          event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
 
         Returns:
           The `EventMultiplexer`.
@@ -140,6 +142,7 @@ class EventMultiplexer(object):
                     path,
                     size_guidance=self._size_guidance,
                     purge_orphaned_data=self.purge_orphaned_data,
+                    event_file_name_filter=event_file_name_filter,
                 )
                 self._accumulators[name] = accumulator
                 self._paths[name] = path
@@ -148,7 +151,7 @@ class EventMultiplexer(object):
                 accumulator.Reload()
         return self
 
-    def AddRunsFromDirectory(self, path, name=None):
+    def AddRunsFromDirectory(self, path, name=None, event_file_name_filter=None):
         """Load runs from a directory; recursively walks subdirectories.
 
         If path doesn't exist, no-op. This ensures that it is safe to call
@@ -168,6 +171,7 @@ class EventMultiplexer(object):
             is the concatenation of the parent name and the subdirectory name. If
             name is provided and the directory contains event files, then a run
             is added called "name" and with the events from the path.
+          event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
 
         Raises:
           ValueError: If the path exists and isn't a directory.
@@ -176,11 +180,11 @@ class EventMultiplexer(object):
           The `EventMultiplexer`.
         """
         logger.info("Starting AddRunsFromDirectory: %s", path)
-        for subdir in io_wrapper.GetLogdirSubdirectories(path):
+        for subdir in io_wrapper.GetLogdirSubdirectories(path, event_file_name_filter):
             logger.info("Adding events from directory %s", subdir)
             rpath = os.path.relpath(subdir, path)
             subname = os.path.join(name, rpath) if name else rpath
-            self.AddRun(subdir, name=subname)
+            self.AddRun(subdir, name=subname, event_file_name_filter=event_file_name_filter)
         logger.info("Done with AddRunsFromDirectory: %s", path)
         return self
 

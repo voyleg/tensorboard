@@ -39,6 +39,7 @@ import inspect
 import logging
 import mimetypes
 import os
+import re
 import signal
 import socket
 import sys
@@ -299,7 +300,7 @@ class TensorBoard(object):
                 "Not bringing up TensorBoard, but inspecting event files."
             )
             event_file = os.path.expanduser(flags.event_file)
-            efi.inspect(flags.logdir, event_file, flags.tag)
+            efi.inspect(flags.logdir, event_file, flags.tag, data_ingester._get_event_file_name_filter(flags))
             return 0
         try:
             server = self._make_server()

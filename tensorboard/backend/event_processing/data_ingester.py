@@ -78,6 +78,7 @@ class LocalDataIngester(object):
             self._path_to_run = {os.path.expanduser(flags.logdir): None}
         else:
             self._path_to_run = _parse_event_files_spec(flags.logdir_spec)
+        self._event_file_name_filter = _get_event_file_name_filter(flags)
 
     @property
     def data_provider(self):
@@ -97,7 +98,7 @@ class LocalDataIngester(object):
                 start = time.time()
                 logger.info("TensorBoard reload process beginning")
                 for path, name in six.iteritems(self._path_to_run):
-                    self._multiplexer.AddRunsFromDirectory(path, name)
+                    self._multiplexer.AddRunsFromDirectory(path, name, self._event_file_name_filter)
                 logger.info(
                     "TensorBoard reload process: Reload the whole Multiplexer"
                 )
@@ -198,3 +199,11 @@ def _parse_event_files_spec(logdir_spec):
             path = os.path.realpath(os.path.expanduser(path))
         files[path] = run_name
     return files
+
+
+def _get_event_file_name_filter(flags):
+    if flags.event_file_suffix_pattern is not None:
+        pattern = re.compile(flags.event_file_suffix_pattern + "$")
+        return lambda path: pattern.search(path)
+    else:
+        return None

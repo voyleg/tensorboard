@@ -166,6 +166,7 @@ class EventAccumulator(object):
         size_guidance=None,
         compression_bps=NORMAL_HISTOGRAM_BPS,
         purge_orphaned_data=True,
+        event_file_name_filter=None,
     ):
         """Construct the `EventAccumulator`.
 
@@ -183,6 +184,7 @@ class EventAccumulator(object):
             `ProcessCompressedHistogram`).
           purge_orphaned_data: Whether to discard any events that were "orphaned" by
             a TensorFlow restart.
+          event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
         """
         size_guidance = size_guidance or DEFAULT_SIZE_GUIDANCE
         sizes = {}
@@ -218,7 +220,7 @@ class EventAccumulator(object):
 
         self._generator_mutex = threading.Lock()
         self.path = path
-        self._generator = _GeneratorFromPath(path)
+        self._generator = _GeneratorFromPath(path, event_file_name_filter)
 
         self._compression_bps = compression_bps
         self.purge_orphaned_data = purge_orphaned_data
@@ -815,17 +817,21 @@ def _GetPurgeMessage(
     )
 
 
-def _GeneratorFromPath(path):
-    """Create an event generator for file or directory at given path string."""
+def _GeneratorFromPath(path, event_file_name_filter=None):
+    """Create an event generator for file or directory at given path string.
+
+    Args:
+      event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
+    """
     if not path:
         raise ValueError("path must be a valid string")
-    if io_wrapper.IsSummaryEventsFile(path):
+    if io_wrapper.IsSummaryEventsFile(path, event_file_name_filter):
         return event_file_loader.LegacyEventFileLoader(path)
     else:
         return directory_watcher.DirectoryWatcher(
             path,
             event_file_loader.LegacyEventFileLoader,
-            io_wrapper.IsSummaryEventsFile,
+            lambda p: io_wrapper.IsSummaryEventsFile(p, event_file_name_filter),
         )
 
 

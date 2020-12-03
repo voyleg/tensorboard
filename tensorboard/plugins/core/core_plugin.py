@@ -254,6 +254,13 @@ instead of `--logdir`.
         )
 
         parser.add_argument(
+            "--event_file_suffix_pattern",
+            type=str,
+            default=None,
+            help="""Only load event files whose names end with this pattern in re format.""",
+        )
+
+        parser.add_argument(
             "--host",
             metavar="ADDR",
             type=str,

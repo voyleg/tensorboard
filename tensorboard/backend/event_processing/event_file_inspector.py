@@ -318,7 +318,7 @@ def get_out_of_order(list_of_numbers):
     return result
 
 
-def generators_from_logdir(logdir):
+def generators_from_logdir(logdir, event_file_name_filter=None):
     """Returns a list of event generators for subdirectories with event files.
 
     The number of generators returned should equal the number of directories
@@ -327,17 +327,18 @@ def generators_from_logdir(logdir):
 
     Args:
       logdir: A log directory that contains event files.
+      event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
 
     Returns:
       List of event generators for each subdirectory with event files.
     """
-    subdirs = io_wrapper.GetLogdirSubdirectories(logdir)
+    subdirs = io_wrapper.GetLogdirSubdirectories(logdir, event_file_name_filter)
     generators = [
         itertools.chain(
             *[
                 generator_from_event_file(os.path.join(subdir, f))
                 for f in tf.io.gfile.listdir(subdir)
-                if io_wrapper.IsTensorFlowEventsFile(os.path.join(subdir, f))
+                if io_wrapper.IsTensorFlowEventsFile(os.path.join(subdir, f), event_file_name_filter)
             ]
         )
         for subdir in subdirs
@@ -350,7 +351,7 @@ def generator_from_event_file(event_file):
     return event_file_loader.LegacyEventFileLoader(event_file).Load()
 
 
-def get_inspection_units(logdir="", event_file="", tag=""):
+def get_inspection_units(logdir="", event_file="", tag="", event_file_name_filter=None):
     """Returns a list of InspectionUnit objects given either logdir or
     event_file.
 
@@ -362,13 +363,14 @@ def get_inspection_units(logdir="", event_file="", tag=""):
     Args:
       logdir: A log directory that contains event files.
       event_file: Or, a particular event file path.
+      event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
       tag: An optional tag name to query for.
 
     Returns:
       A list of InspectionUnit objects.
     """
     if logdir:
-        subdirs = io_wrapper.GetLogdirSubdirectories(logdir)
+        subdirs = io_wrapper.GetLogdirSubdirectories(logdir, event_file_name_filter)
         inspection_units = []
         for subdir in subdirs:
             generator = itertools.chain(
@@ -376,7 +378,8 @@ def get_inspection_units(logdir="", event_file="", tag=""):
                     generator_from_event_file(os.path.join(subdir, f))
                     for f in tf.io.gfile.listdir(subdir)
                     if io_wrapper.IsTensorFlowEventsFile(
-                        os.path.join(subdir, f)
+                        os.path.join(subdir, f),
+                        event_file_name_filter
                     )
                 ]
             )
@@ -393,7 +396,7 @@ def get_inspection_units(logdir="", event_file="", tag=""):
                     "\n".join([u.name for u in inspection_units])
                 )
             )
-        elif io_wrapper.IsTensorFlowEventsFile(logdir):
+        elif io_wrapper.IsTensorFlowEventsFile(logdir, event_file_name_filter):
             print(
                 "It seems that {} may be an event file instead of a logdir. If this "
                 "is the case, use --event_file instead of --logdir to pass "
@@ -414,12 +417,13 @@ def get_inspection_units(logdir="", event_file="", tag=""):
     return []
 
 
-def inspect(logdir="", event_file="", tag=""):
+def inspect(logdir="", event_file="", tag="", event_file_name_filter=None):
     """Main function for inspector that prints out a digest of event files.
 
     Args:
       logdir: A log directory that contains event files.
       event_file: Or, a particular event file path.
+      event_file_name_filter: If not None, looks only for filenames that satisfy this predicate.
       tag: An optional tag name to query for.
 
     Raises:
@@ -430,7 +434,7 @@ def inspect(logdir="", event_file="", tag=""):
         + "Processing event files... (this can take a few minutes)\n"
         + PRINT_SEPARATOR
     )
-    inspection_units = get_inspection_units(logdir, event_file, tag)
+    inspection_units = get_inspection_units(logdir, event_file, tag, event_file_name_filter)
 
     for unit in inspection_units:
         if tag:

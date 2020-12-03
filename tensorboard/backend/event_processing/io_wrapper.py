@@ -44,11 +44,12 @@ def PathSeparator(path):
     return "/" if IsCloudPath(path) else os.sep
 
 
-def IsTensorFlowEventsFile(path):
+def IsTensorFlowEventsFile(path, filename_filter=None):
     """Check the path name to see if it is probably a TF Events file.
 
     Args:
       path: A file path to check if it is an event file.
+      filename_filter: If not None, returns True only for filenames that satisfy this predicate.
 
     Raises:
       ValueError: If the path is an empty string.
@@ -61,15 +62,20 @@ def IsTensorFlowEventsFile(path):
     """
     if not path:
         raise ValueError("Path must be a nonempty string")
-    return "tfevents" in tf.compat.as_str_any(os.path.basename(path))
+    path = tf.compat.as_str_any(os.path.basename(path))
+    if filename_filter is not None:
+        return ("tfevents" in path) and filename_filter(path)
+    else:
+        return "tfevents" in path
 
 
-def IsSummaryEventsFile(path):
+def IsSummaryEventsFile(path, filename_filter=None):
     """Check whether the path is probably a TF Events file containing Summary.
 
     Args:
       path: A file path to check if it is an event file containing `Summary`
         protos.
+      filename_filter: If not None, returns True only for filenames that satisfy this predicate.
 
     Returns:
       If path is formatted like a TensorFlowEventsFile. Dummy files such as
@@ -77,7 +83,7 @@ def IsSummaryEventsFile(path):
         no `Summary` protos  are treated as `False`. For background, see:
         https://github.com/tensorflow/tensorboard/issues/2084.
     """
-    return IsTensorFlowEventsFile(path) and not path.endswith(".profile-empty")
+    return IsTensorFlowEventsFile(path, filename_filter) and not path.endswith(".profile-empty")
 
 
 def ListDirectoryAbsolute(directory):
@@ -187,7 +193,7 @@ def ListRecursivelyViaWalking(top):
         )
 
 
-def GetLogdirSubdirectories(path):
+def GetLogdirSubdirectories(path, filename_filter=None):
     """Obtains all subdirectories with events files.
 
     The order of the subdirectories returned is unspecified. The internal logic
@@ -195,6 +201,7 @@ def GetLogdirSubdirectories(path):
 
     Args:
       path: The path to a directory under which to find subdirectories.
+      filename_filter: If not None, only looks for filenames that satisfy this predicate.
 
     Returns:
       A tuple of absolute paths of all subdirectories each with at least 1 events
@@ -231,5 +238,5 @@ def GetLogdirSubdirectories(path):
     return (
         subdir
         for (subdir, files) in traversal_method(path)
-        if any(IsTensorFlowEventsFile(f) for f in files)
+        if any(IsTensorFlowEventsFile(f, filename_filter) for f in files)
     )
